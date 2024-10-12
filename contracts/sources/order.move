@@ -4,7 +4,7 @@ module fair_fun::order {
     use fair_fun::prebuyer::{Self, Prebuyer};
     use sui::clock::Clock;
     use sui::coin::{Self, Coin};
-    use sui::balance::{Self, Balance};
+    use sui::balance;
     use sui::sui::SUI;
 
     const MIN_POOL_LIFETIME: u64 = 1800000;
@@ -110,8 +110,7 @@ module fair_fun::order {
         sui: Coin<SUI>,
         release_date: &u64,
         prebuyer: &mut Prebuyer,
-        clock: &Clock,
-        ctx: &TxContext) {
+        clock: &Clock) {
 
         assert!(bid.value() > 0);
         assert!(sui.value() > 0);
@@ -133,7 +132,7 @@ module fair_fun::order {
         while (i <= order.prebuyers.length()) {
             let prebuyer = order.prebuyers.borrow_mut(i);
             if (prebuyer.get_bidder_address() == ctx.sender()) {
-                update_buyer(bid, sui, &order.release_date, prebuyer, clock, ctx);
+                update_buyer(bid, sui, &order.release_date, prebuyer, clock);
                 return
             };
             i = i + 1;
