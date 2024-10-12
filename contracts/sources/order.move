@@ -8,6 +8,7 @@ module fair_fun::order {
     use sui::sui::SUI;
 
     const MIN_POOL_LIFETIME: u64 = 1800000;
+    const ENoUser: u64 = 0;
 
     public enum OrderStatus has store, drop {
         Init,
@@ -111,5 +112,20 @@ module fair_fun::order {
         };
 
         add_buyer(bid, sui, order, clock, ctx);
+    }
+
+    public fun permanent_exit(order: &mut Order, ctx: &mut TxContext): Coin<SUI> {
+        let mut i = 0;
+        while (i <= order.prebuyers.length()) {
+            let prebuyer = order.prebuyers.borrow_mut(i);
+            if (prebuyer.get_bidder_address() == ctx.sender()) {
+                let (mut lockings, bid_amount) = prebuyer.exit_bidder();
+                balance::join(&mut lockings, bid_amount);
+                let withdraw_amount: Coin<SUI> = coin::from_balance(lockings, ctx);
+                return withdraw_amount
+            };
+            i = i + 1;
+        };
+        abort ENoUser
     }
 }

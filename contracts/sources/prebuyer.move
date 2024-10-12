@@ -6,7 +6,7 @@ module fair_fun::prebuyer {
     use fair_fun::utils::{calculate_auction_score};
     use std::fixed_point32::{FixedPoint32, create_from_raw_value, };
 
-    public enum Status has store{
+    public enum Status has store, drop {
         Bidding,
         Exited
     }
@@ -45,5 +45,13 @@ module fair_fun::prebuyer {
 
     public fun get_bidder_address(prebuyer: &Prebuyer): address {
         prebuyer.bidder_address
+    }
+
+    public fun exit_bidder(prebuyer: &mut Prebuyer): (Balance<SUI>, Balance<SUI>) {
+        let lockings = prebuyer.lockings.withdraw_all();
+        let bid_size = prebuyer.bid_size.withdraw_all();
+        prebuyer.status = Status::Exited;
+
+        (lockings, bid_size)
     }
 }
