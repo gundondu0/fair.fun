@@ -79,19 +79,37 @@ module fair_fun::order {
         vector::push_back<Prebuyer>(&mut order.prebuyers, prebuyer);
     }
 
+    fun update_buyer(
+        bid: Coin<SUI>,
+        sui: Coin<SUI>,
+        release_date: &u64,
+        prebuyer: &mut Prebuyer,
+        clock: &Clock,
+        ctx: &TxContext) {
+
+        assert!(bid.value() > 0);
+        assert!(sui.value() > 0);
+
+        // The owner is who's calledin
+        assert!(prebuyer.get_bidder_address() == ctx.sender());
+
+        let bid_as_balance = coin::into_balance(bid);
+        let sui_as_balance = coin::into_balance(sui);
+
+        prebuyer::update(sui_as_balance, bid_as_balance, prebuyer, clock, release_date);
+        }
+
     public fun add_or_update_buyer(order: &mut Order, bid: Coin<SUI>, sui: Coin<SUI>, clock: &Clock, ctx: &mut TxContext) {
         let mut i = 0;
-        let mut found = false;
         while (i <= order.prebuyers.length()) {
-            if (order.prebuyers.borrow_mut(i).get_bidder_address() == ctx.sender()) {
-                update_buyer();
-                found = true;
-                break;
+            let prebuyer = order.prebuyers.borrow_mut(i);
+            if (prebuyer.get_bidder_address() == ctx.sender()) {
+                update_buyer(bid, sui, &order.release_date, prebuyer, clock, ctx);
+                return
             };
             i = i + 1;
         };
-        if (!found) {
-            add_buyer(bid, sui, order, clock, ctx);
-        };
+
+        add_buyer(bid, sui, order, clock, ctx);
     }
 }
