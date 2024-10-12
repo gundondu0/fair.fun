@@ -79,5 +79,19 @@ module fair_fun::order {
         vector::push_back<Prebuyer>(&mut order.prebuyers, prebuyer);
     }
 
-
+    public fun add_or_update_buyer(order: &mut Order, bid: Coin<SUI>, sui: Coin<SUI>, clock: &Clock, ctx: &mut TxContext) {
+        let mut i = 0;
+        let mut found = false;
+        while (i <= order.prebuyers.length()) {
+            if (order.prebuyers.borrow_mut(i).get_bidder_address() == ctx.sender()) {
+                update_buyer();
+                found = true;
+                break;
+            };
+            i = i + 1;
+        };
+        if (!found) {
+            add_buyer(bid, sui, order, clock, ctx);
+        };
+    }
 }
