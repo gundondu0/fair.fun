@@ -42,4 +42,8 @@ module fair_fun::prebuyer {
         balance::join(&mut prebuyer.bid_size, added_bid_size);
         balance::join(&mut prebuyer.lockings, added_lockings);
     }
+
+    public fun get_bidder_address(prebuyer: &Prebuyer): address {
+        prebuyer.bidder_address
+    }
 }
