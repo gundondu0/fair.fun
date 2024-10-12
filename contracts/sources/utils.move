@@ -1,8 +1,7 @@
 module fair_fun::utils {
+    use std::fixed_point32::{create_from_rational, create_from_raw_value, FixedPoint32};
 
-    const PRECISION_FACTOR: u64 = 1000;
-    const BETA: u64 = 10;
-
+    const ONE_OVER_BETA: u64 = 10;
     /*
     pub fn calculate_auction_score(bid_amount: u64, sol_amount: u64, pool_release_timestamp: i64, bid_timestamp: i64) -> u64 {
         const BETA: f64 = 0.5;
@@ -15,12 +14,13 @@ module fair_fun::utils {
     }
     */
 
-    public fun calculate_auction_score(bid_amount: u64, locked_amount: u64, release_timestamp: &u64, bid_timestamp: u64): u64 {
-        let bid_amount_scaled = bid_amount * PRECISION_FACTOR;
-        let locked_amount_scaled = locked_amount * PRECISION_FACTOR;
+    public fun calculate_auction_score(bid_amount: u64, locked_amount: u64, release_timestamp: &u64, bid_timestamp: u64): FixedPoint32 {
+        let coin_ratio: FixedPoint32 = create_from_rational(bid_amount, locked_amount);
+        let numerator: u64 = bid_amount*(*release_timestamp-bid_timestamp);
+        let denumerator: u64 = locked_amount*ONE_OVER_BETA**release_timestamp;
+        let other_ratio: FixedPoint32 = create_from_rational(numerator,denumerator);
 
-        let time_ratio = (*release_timestamp - bid_timestamp) * PRECISION_FACTOR / *release_timestamp * PRECISION_FACTOR;
-        let auction_score = (bid_amount_scaled / locked_amount_scaled) * (1 * PRECISION_FACTOR + time_ratio / BETA);
+        let auction_score: FixedPoint32 = create_from_raw_value((coin_ratio.get_raw_value()+other_ratio.get_raw_value()));
 
         auction_score
     }
