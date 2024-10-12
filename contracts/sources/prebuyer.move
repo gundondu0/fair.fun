@@ -47,6 +47,10 @@ module fair_fun::prebuyer {
         prebuyer.bidder_address
     }
 
+    public(package) fun withdraw_lockings(prebuyer: &mut Prebuyer): Balance<SUI> {
+        prebuyer.lockings.withdraw_all()
+    }
+
     public(package) fun exit_bidder(prebuyer: &mut Prebuyer): (Balance<SUI>, Balance<SUI>) {
         let lockings = prebuyer.lockings.withdraw_all();
         let bid_size = prebuyer.bid_size.withdraw_all();
