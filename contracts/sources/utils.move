@@ -15,13 +15,13 @@ module fair_fun::utils {
     */
 
     public fun calculate_auction_score(bid_amount: u64, locked_amount: u64, release_timestamp: &u64, bid_timestamp: u64): u64 {
-        let beta: u64 = (5* PRECISION_FACTOR) / (10 * PRECISION_FACTOR);
+        let beta: u64 = 2;
 
         let bid_amount_scaled = bid_amount * PRECISION_FACTOR;
         let locked_amount_scaled = locked_amount * PRECISION_FACTOR;
 
-        let time_ratio = (*release_timestamp - bid_timestamp) * PRECISION_FACTOR / release_timestamp * PRECISION_FACTOR;
-        let auction_score = (bid_amount_scaled / locked_amount_scaled) * (1 * PRECISION_FACTOR + beta * time_ratio);
+        let time_ratio = (*release_timestamp - bid_timestamp) * PRECISION_FACTOR / *release_timestamp * PRECISION_FACTOR;
+        let auction_score = (bid_amount_scaled / locked_amount_scaled) * (1 * PRECISION_FACTOR + time_ratio / 2);
 
         auction_score
     }
