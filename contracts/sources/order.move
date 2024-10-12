@@ -11,7 +11,7 @@ module fair_fun::order {
     const ENoUser: u64 = 0;
     const ONLY_WITHDRAW_DURATION: u64 = 3 * 60 * 1000;  // 3 minutes
 
-    public enum OrderStatus has store, drop {
+    public enum OrderStatus has store, drop, copy {
         //Init,
         Open,
         OnlyWithdraw,
@@ -67,7 +67,7 @@ module fair_fun::order {
         let current_time = clock.timestamp_ms();
 
         // If status is Open
-        if (&order.status == OrderStatus::Open) {
+        if (order.status == OrderStatus::Open) {
             // Withdrawal time
             let only_withdraw_start = order.release_date - ONLY_WITHDRAW_DURATION;
 
@@ -79,7 +79,7 @@ module fair_fun::order {
         };
 
         // If status is OnlyWithdraw
-        if (&order.status == OrderStatus::OnlyWithdraw) {
+        if (order.status == OrderStatus::OnlyWithdraw) {
             // If current time is past release_date
             if (current_time >= order.release_date) {
                 // Set to OnDistribution
@@ -127,7 +127,7 @@ module fair_fun::order {
         order.update_status(clock);
 
         // Order should be open to bids
-        assert!(&order.status == OrderStatus::Open);
+        assert!(order.status == OrderStatus::Open);
 
         let mut i = 0;
         while (i <= order.prebuyers.length()) {
@@ -144,7 +144,7 @@ module fair_fun::order {
 
     public fun permanent_exit(order: &mut Order, ctx: &mut TxContext): Coin<SUI> {
 
-        assert!(&order.status < OrderStatus::OnDistribution);
+        assert!(order.status == OrderStatus::Open || order.status == OrderStatus::OnlyWithdraw);
 
         let mut i = 0;
         while (i <= order.prebuyers.length()) {
