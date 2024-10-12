@@ -2,7 +2,6 @@ module fair_fun::order {
 
     use std::string::String;
     use fair_fun::prebuyer::{Self, Prebuyer};
-    use fair_fun::utils::calculate_auction_score;
     use sui::clock::Clock;
     use sui::coin::{Self, Coin};
     use sui::balance::{Self, Balance};
@@ -40,10 +39,13 @@ module fair_fun::order {
         id: UID,
     }
 
+    // Create new Order object
     public fun new(metadata: Metadata, release_date: u64, clock: &Clock, ctx: &mut TxContext) {
 
+        // Get current time
         let current_time = clock.timestamp_ms();
 
+        // Abort if release_date is too close
         assert!(release_date > current_time + MIN_POOL_LIFETIME, 0);    //TODO errors 
 
         let order = Order {
@@ -71,11 +73,11 @@ module fair_fun::order {
         let bid_as_balance = coin::into_balance(bid);
         let sui_as_balance = coin::into_balance(sui);
 
-        let prebuyer = prebuyer::new(sui_as_balance, bid_as_balance, clock, order.release_date, ctx);
+        let prebuyer = prebuyer::new(sui_as_balance, bid_as_balance, clock, &order.release_date, ctx);
 
         // Save the prebuyer in the vector
         vector::push_back<Prebuyer>(&mut order.prebuyers, prebuyer);
-
     }
+
 
 }
