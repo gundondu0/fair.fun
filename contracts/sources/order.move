@@ -9,14 +9,15 @@ module fair_fun::order {
 
     const MIN_POOL_LIFETIME: u64 = 1800000;
     const ENoUser: u64 = 0;
+    const ONLY_WITHDRAW_DURATION: u64 = 3 * 60 * 1000;  // 3 minutes
 
     public enum OrderStatus has store, drop {
-        Init,
+        //Init,
         Open,
-        OnDistribution,
         OnlyWithdraw,
-        Cancelled,
-        Finished,
+        OnDistribution,
+        //Cancelled,
+        //Finished,
     }
     
     public struct Metadata has store {
@@ -61,15 +62,39 @@ module fair_fun::order {
         transfer::share_object(order);
     }
 
-    public fun add_buyer(
+    fun update_status(order: &mut Order, clock: &Clock) {
+
+        let current_time = clock.timestamp_ms();
+
+        // If status is Open
+        if (&order.status == OrderStatus::Open) {
+            // Withdrawal time
+            let only_withdraw_start = order.release_date - ONLY_WITHDRAW_DURATION;
+
+            // If current time is past withdrawal start
+            if (current_time >= only_withdraw_start) {
+                // Set to OnlyWithdraw
+                order.status = OrderStatus::OnlyWithdraw;
+            }
+        };
+
+        // If status is OnlyWithdraw
+        if (&order.status == OrderStatus::OnlyWithdraw) {
+            // If current time is past release_date
+            if (current_time >= order.release_date) {
+                // Set to OnDistribution
+                order.status = OrderStatus::OnDistribution;
+            }
+        }
+
+    }
+
+    fun add_buyer(
         bid: Coin<SUI>, 
         sui: Coin<SUI>, 
         order: &mut Order, 
         clock: &Clock,
         ctx: &mut TxContext) {
-
-        // Order should be open to bids
-        assert!(&order.status == OrderStatus::Open);
 
         let bid_as_balance = coin::into_balance(bid);
         let sui_as_balance = coin::into_balance(sui);
@@ -91,16 +116,19 @@ module fair_fun::order {
         assert!(bid.value() > 0);
         assert!(sui.value() > 0);
 
-        // The owner is who's calledin
-        assert!(prebuyer.get_bidder_address() == ctx.sender());
-
         let bid_as_balance = coin::into_balance(bid);
         let sui_as_balance = coin::into_balance(sui);
 
-        prebuyer::update(sui_as_balance, bid_as_balance, prebuyer, clock, release_date);
+        prebuyer.update(sui_as_balance, bid_as_balance, clock, release_date);
         }
 
     public fun add_or_update_buyer(order: &mut Order, bid: Coin<SUI>, sui: Coin<SUI>, clock: &Clock, ctx: &mut TxContext) {
+
+        order.update_status(clock);
+
+        // Order should be open to bids
+        assert!(&order.status == OrderStatus::Open);
+
         let mut i = 0;
         while (i <= order.prebuyers.length()) {
             let prebuyer = order.prebuyers.borrow_mut(i);
@@ -115,6 +143,9 @@ module fair_fun::order {
     }
 
     public fun permanent_exit(order: &mut Order, ctx: &mut TxContext): Coin<SUI> {
+
+        assert!(&order.status < OrderStatus::OnDistribution);
+
         let mut i = 0;
         while (i <= order.prebuyers.length()) {
             let prebuyer = order.prebuyers.borrow_mut(i);

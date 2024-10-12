@@ -35,7 +35,7 @@ module fair_fun::prebuyer {
         prebuyer
     }
 
-    public fun update(added_lockings: Balance<SUI>, added_bid_size: Balance<SUI>, prebuyer: &mut Prebuyer, clock: &Clock, pool_release_date: &u64) {
+    public fun update(prebuyer: &mut Prebuyer, added_lockings: Balance<SUI>, added_bid_size: Balance<SUI>, clock: &Clock, pool_release_date: &u64) {
         let current_time = clock.timestamp_ms();
         let new_auction_score = calculate_auction_score(added_bid_size.value(), added_lockings.value() , pool_release_date, current_time);
         prebuyer.auction_score = create_from_raw_value(prebuyer.auction_score.get_raw_value() + new_auction_score.get_raw_value());
