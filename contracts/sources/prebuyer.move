@@ -21,7 +21,7 @@ module fair_fun::prebuyer {
         status: Status,
     }
 
-    public fun new(lockings: Balance<SUI>, bid_size: Balance<SUI>, clock: &Clock, pool_release_date: &u64, ctx: &mut TxContext): Prebuyer{
+    public(package) fun new(lockings: Balance<SUI>, bid_size: Balance<SUI>, clock: &Clock, pool_release_date: &u64, ctx: &mut TxContext): Prebuyer{
         let current_time = clock.timestamp_ms();
         let prebuyer = Prebuyer {
             id: object::new(ctx),
@@ -35,7 +35,7 @@ module fair_fun::prebuyer {
         prebuyer
     }
 
-    public fun update(prebuyer: &mut Prebuyer, added_lockings: Balance<SUI>, added_bid_size: Balance<SUI>, clock: &Clock, pool_release_date: &u64) {
+    public(package) fun update(prebuyer: &mut Prebuyer, added_lockings: Balance<SUI>, added_bid_size: Balance<SUI>, clock: &Clock, pool_release_date: &u64) {
         let current_time = clock.timestamp_ms();
         let new_auction_score = calculate_auction_score(added_bid_size.value(), added_lockings.value() , pool_release_date, current_time);
         prebuyer.auction_score = create_from_raw_value(prebuyer.auction_score.get_raw_value() + new_auction_score.get_raw_value());
@@ -43,11 +43,11 @@ module fair_fun::prebuyer {
         balance::join(&mut prebuyer.lockings, added_lockings);
     }
 
-    public fun get_bidder_address(prebuyer: &Prebuyer): address {
+    public(package) fun get_bidder_address(prebuyer: &Prebuyer): address {
         prebuyer.bidder_address
     }
 
-    public fun exit_bidder(prebuyer: &mut Prebuyer): (Balance<SUI>, Balance<SUI>) {
+    public(package) fun exit_bidder(prebuyer: &mut Prebuyer): (Balance<SUI>, Balance<SUI>) {
         let lockings = prebuyer.lockings.withdraw_all();
         let bid_size = prebuyer.bid_size.withdraw_all();
         prebuyer.status = Status::Exited;
