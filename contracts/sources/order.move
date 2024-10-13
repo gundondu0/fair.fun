@@ -5,7 +5,7 @@ module fair_fun::order {
     use sui::clock::Clock;
     use sui::coin::{Self, Coin};
     use sui::balance;
-    use sui::sui::SUI;
+    use sui::sui::SUI;    use std::fixed_point32::{create_from_rational};
 
     const MIN_POOL_LIFETIME: u64 = 1800000;
     const ENoUser: u64 = 0;
@@ -166,4 +166,67 @@ module fair_fun::order {
         };
         abort ENoUser
     }
+
+    #[test_only]
+    use sui::tx_context::{dummy};
+    #[test_only]
+    use sui::clock::{create_for_testing, set_for_testing, destroy_for_testing};
+    #[test_only]
+    use std::debug::print;
+
+    #[test]
+    fun test_update_status() {
+
+        let mut ctx = dummy();
+        let mut clock = create_for_testing(&mut ctx);
+        clock.set_for_testing(100000000000000);
+
+        let metadata = Metadata {
+            name: b"Sample Product".to_string(),
+            description: b"This is a sample product description.".to_string(),
+            image_url: b"https://example.com/sample-product.jpg".to_string(),
+        };
+
+        let release_date = clock.timestamp_ms() + 100000;
+
+        let mut order = Order {
+            id: object::new(&mut ctx),
+            metadata: metadata,
+            created_at: clock.timestamp_ms(),
+            release_date: release_date,
+            status: OrderStatus::Open,
+            prebuyers: vector::empty<Prebuyer>()
+        };
+
+        print(&order.release_date);
+
+        clock.set_for_testing(release_date + 1);
+
+        order.update_status(&clock);
+
+        assert!(order.status == OrderStatus::OnDistribution);
+        print(&order);
+
+        clock.destroy_for_testing();
+        let Order {
+            id,
+            metadata: metadata,
+            created_at: _,
+            release_date: _,
+            status: _,
+            prebuyers: prebuyers,
+        } = order;
+
+        let Metadata {
+            name: _,
+            description: _,
+            image_url: _,
+        } = metadata;
+
+        prebuyers.destroy_empty();
+
+        object::delete(id);
+
+    }
+
 }
