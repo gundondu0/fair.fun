@@ -47,6 +47,10 @@ module fair_fun::prebuyer {
         prebuyer.bidder_address
     }
 
+    public(package) fun get_auction_score(prebuyer: &Prebuyer): FixedPoint32 {
+        prebuyer.auction_score
+    }
+
     public(package) fun withdraw_lockings(prebuyer: &mut Prebuyer): Balance<SUI> {
         prebuyer.lockings.withdraw_all()
     }

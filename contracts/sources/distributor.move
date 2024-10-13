@@ -1,7 +1,8 @@
 module fair_fun::distributor {
 
     use sui::balance::{Balance};
-    use fair_fun::buyer::Buyer;
+    use fair_fun::buyer::{Self, Buyer};
+    use fair_fun::prebuyer::Prebuyer;
     use sui::coin::Coin;
     use sui::clock::Clock;
     use sui::random::{Random, new_generator};
@@ -18,9 +19,15 @@ module fair_fun::distributor {
         num: u64
     }
 
-    public(package) fun new<T>(coin: Coin<T>, created_at: u64, ends_at: u64, buyers: vector<Buyer>): Distributor<T> {
+    public(package) fun new<T>(coin: Coin<T>, created_at: u64, ends_at: u64, prebuyers: &mut vector<Prebuyer>): Distributor<T> {
 
         let balance = coin.into_balance();
+
+        // Sort prebuyers by auction score
+        let prebuyers_length = prebuyers.length();
+        quick_sort(prebuyers, 0, prebuyers_length - 1);
+
+        let buyers = buyer::new_buyers(prebuyers);
 
         Distributor {
             balance,
@@ -29,6 +36,35 @@ module fair_fun::distributor {
             buyers
         }
 
+    }
+
+    fun quick_sort(prebuyers: &mut vector<Prebuyer>, left: u64, right: u64) {
+        if (left < right) {
+            let partition_index = partion(prebuyers, left, right);
+
+            if (partition_index > 1) {
+                quick_sort(prebuyers, left, partition_index - 1);
+            };
+            quick_sort(prebuyers, partition_index + 1, right);
+        }
+    }
+
+    fun partion(prebuyers: &mut vector<Prebuyer>, left: u64, right: u64): u64 {
+        let pivot: u64 = left;
+        let mut index: u64 = pivot + 1;
+        let mut i: u64 = index;
+
+        while (i <= right) {
+            if (prebuyers[i].get_auction_score().get_raw_value() < prebuyers[pivot].get_auction_score().get_raw_value()) {
+                prebuyers.swap(i, index);
+                index = index + 1;
+            };
+            i = i + 1;
+        };
+
+        prebuyers.swap(pivot, index - 1);
+
+        index - 1
     }
 
     // Generate a random number
