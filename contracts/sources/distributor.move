@@ -1,27 +1,31 @@
 module fair_fun::distributor {
 
-    use sui::balance::{Balance};
+    use sui::balance::{Balance, split};
     use fair_fun::buyer::{Self, Buyer};
     use fair_fun::prebuyer::Prebuyer;
-    use sui::coin::Coin;
+    use sui::coin::{Coin, from_balance, zero};
     use sui::clock::Clock;
+    use sui::sui::SUI;
     use sui::random::{Random, new_generator};
+    use std::fixed_point32::{create_from_rational};
 
     public struct Distributor<phantom T> {
-        balance: Balance<T>,    // tokens
+        token_pool: Balance<T>,   //tokens
+        sui_pool: Balance<SUI>,
         created_at: u64,
         ends_at: u64,
-        buyers: vector<Buyer>                // Sorted
+        buyers: vector<Buyer<T>>     // Sorted
     }
 
     // Wrapper type
     public struct RandomNumber has drop {
-        num: u64
+        num1: u64,
+        num2: u64
     }
 
-    public(package) fun new<T>(coin: Coin<T>, created_at: u64, ends_at: u64, prebuyers: &mut vector<Prebuyer>): Distributor<T> {
+    public(package) fun new<T>(coin: Coin<T>, sui_pool: Balance<SUI>, created_at: u64, ends_at: u64, prebuyers: &mut vector<Prebuyer>): Distributor<T> {
 
-        let balance = coin.into_balance();
+        let token_pool = coin.into_balance();
 
         // Sort prebuyers by auction score
         let prebuyers_length = prebuyers.length();
@@ -29,13 +33,47 @@ module fair_fun::distributor {
 
         let buyers = buyer::new_buyers(prebuyers);
 
-        Distributor {
-            balance,
+        let mut distributor = Distributor {
+            token_pool,
+            sui_pool,
             created_at,
             ends_at,
             buyers
-        }
+        };
 
+        buy_from_pool(&mut distributor);
+        distributor
+    }
+    
+    fun get_token_price<T>(distributor: &Distributor<T>): (u64, u64) {
+        (distributor.sui_pool.value(), distributor.token_pool.value())        
+    }
+
+    fun buy_from_pool<T>(distributor: &mut Distributor<T>) {
+        let mut i = distributor.buyers.length();
+        while (i >= 0) {
+            let (numerator, denominator) = get_token_price(distributor);
+
+            let buyer = distributor.buyers.borrow_mut(i);
+
+            //black magic to simulate dex
+            let allocated_tokens = create_from_rational(denominator * buyer.get_buyer_lockings_u64(), numerator).get_raw_value() >> 16;
+
+            distributor.sui_pool.join(buyer.get_buyer_lockings());
+
+            buyer.add_tokens(distributor.token_pool.split(allocated_tokens));
+            i = i - 1;
+        };
+    }
+
+    fun probabilistic_withdraw<T>(rnd: &RandomNumber, buyer: &mut Buyer<T>, ctx: &mut TxContext): Coin<T> {
+        let rnd_num = (rnd.num2 % 10) + 1;
+        let mut value = create_from_rational(buyer.get_buyer_tokens_u64(), 10*rnd_num).get_raw_value() << 16;
+        if (value < buyer.get_buyer_tokens_u64()) {
+            value = buyer.get_buyer_tokens_u64()
+        };
+
+        from_balance(buyer.withdraw_tokens(value),ctx)
     }
 
     fun quick_sort(prebuyers: &mut vector<Prebuyer>, left: u64, right: u64) {
@@ -72,12 +110,13 @@ module fair_fun::distributor {
         let mut generator = new_generator(r, ctx);
 
         RandomNumber { 
-            num: generator.generate_u64() 
+            num1: generator.generate_u64(), 
+            num2: generator.generate_u64()
         }
     }
 
-    public fun distribute<T>(distributor: &mut Distributor<T>, clock: &Clock, rnd: &RandomNumber, ctx: &mut TxContext) {
-
+    public fun distribute<T>(distributor: &mut Distributor<T>, clock: &Clock, rnd: &RandomNumber, ctx: &mut TxContext): vector<Coin<T>> {
+        let mut coins_to_be_sent = vector::empty<Coin<T>>();
         let current_time = clock.timestamp_ms();
         let buyers_number = distributor.buyers.length();
         // epoch length
@@ -88,21 +127,28 @@ module fair_fun::distributor {
         let mut i = 0;
         while (i <= distributor.buyers.length()) {
             let buyer = distributor.buyers.borrow_mut(i);
-            let rnd_num = (rnd.num % 10) + 1;
+            let rnd_num = (rnd.num1 % 10) + 1;
 
             // first buyer is the lowest in ranking
             if (current_epoch >= i) {
                 // 50%
                 if (rnd_num <= 5) {
-                    // Withdraw
+                    coins_to_be_sent.push_back(probabilistic_withdraw(rnd, buyer, ctx));
+                } else {
+                    coins_to_be_sent.push_back(zero(ctx));
                 }
+
             } else {
                 // 10%
                 if (rnd_num <= 1) {
-                    // Withdraw
+                    coins_to_be_sent.push_back(probabilistic_withdraw(rnd, buyer, ctx));
+                } else {
+                    coins_to_be_sent.push_back(zero(ctx));
                 }
             };
             i = i + 1;
-        }
+        };
+        vector::reverse(&mut coins_to_be_sent);
+        coins_to_be_sent
     }
 }

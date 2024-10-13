@@ -1,13 +1,17 @@
 /// Module: fair_fun
 module fair_fun::prebuyer {
-    use sui::balance::{ Balance, Self };
+    use sui::balance::{ Balance, Self, zero };
     use sui::sui::SUI;
     use sui::clock::Clock;
     use fair_fun::utils::{calculate_auction_score};
     use std::fixed_point32::{FixedPoint32, create_from_raw_value, };
+    use sui::coin::{Coin, into_balance};
+    
+    const MAX_U64: u64 = 0xFFFFFFFFFFFFFFFF;
 
     public enum Status has store, drop {
         Bidding,
+        Owner,
         Exited
     }
 
@@ -33,6 +37,18 @@ module fair_fun::prebuyer {
             status: Status::Bidding
         };
         prebuyer
+    }
+
+    public(package) fun new_dev(ctx: &mut TxContext, owner_lock_amount: Coin<SUI>, current_time: u64): Prebuyer {
+        Prebuyer {
+            id: object::new(ctx),
+            lockings: into_balance(owner_lock_amount),
+            last_bid_time: current_time,
+            bidder_address: ctx.sender(),
+            bid_size: zero<SUI>(),
+            auction_score: create_from_raw_value(MAX_U64),
+            status: Status::Owner,
+        }
     }
 
     public(package) fun update(prebuyer: &mut Prebuyer, added_lockings: Balance<SUI>, added_bid_size: Balance<SUI>, clock: &Clock, pool_release_date: &u64) {

@@ -24,7 +24,6 @@ module fair_fun::order {
         name: String,
         description: String,
         image_url: String,
-        social_urls: vector<String>
     }
 
     public struct Order has key {
@@ -42,13 +41,22 @@ module fair_fun::order {
     }
 
     // Create new Order object
-    public fun new(metadata: Metadata, release_date: u64, clock: &Clock, ctx: &mut TxContext) {
+    public fun new(name: String, description: String, image_url: String, release_date: u64, clock: &Clock, ctx: &mut TxContext, owner_lock_amount: Coin<SUI>) {
+        let metadata = Metadata {
+            name,
+            description,
+            image_url,
+        };
 
         // Get current time
         let current_time = clock.timestamp_ms();
 
         // Abort if release_date is too close
-        assert!(release_date > current_time + MIN_POOL_LIFETIME, 0);    //TODO errors 
+        assert!(release_date > current_time + MIN_POOL_LIFETIME, 0);
+            //TODO errors 
+
+        let mut prebuyers = vector::empty<Prebuyer>();
+        prebuyers.push_back(prebuyer::new_dev(ctx, owner_lock_amount, current_time));
 
         let order = Order {
             id: object::new(ctx),
@@ -56,7 +64,7 @@ module fair_fun::order {
             created_at: clock.timestamp_ms(),
             release_date: release_date,
             status: OrderStatus::Open,
-            prebuyers: vector::empty<Prebuyer>()
+            prebuyers: prebuyers
         };
 
         transfer::share_object(order);
