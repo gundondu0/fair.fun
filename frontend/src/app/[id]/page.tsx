@@ -187,24 +187,28 @@ export default function TokenPage() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch("http://localhost:3000/orders"); // Adjust the URL as needed
-        if (!response.ok) {
-          throw new Error('Failed to fetch orders');
-        }
-        let data = await response.json();
-        data = data.map((order: any) => {
-          console.log(order.endsAt);
-          
-          return {
-            ...order,
-            totalBids: order.users.reduce((acc: number, user: any) => acc + user.bidSize, 0),
-            totalLockedValue: order.users.reduce((acc: number, user: any) => acc + user.lockedSize, 0),
-            endsIn: new Date(order.endsAt).getTime() ,
-            image:order.imageUrl
+        let allData = [];
+        try {
+          const response = await fetch("http://localhost:3000/orders"); // Adjust the URL as needed
 
-          };
-        });
-        const allData  = data.concat(Object.values(tokens));
+          if (!response.ok) {
+            throw new Error('Failed to fetch orders');
+          }
+          let data = await response.json();
+          data = data.map((order: any) => {
+            return {
+              ...order,
+              totalBids: order.users.reduce((acc: number, user: any) => acc + user.bidSize, 0),
+              totalLockedValue: order.users.reduce((acc: number, user: any) => acc + user.lockedSize, 0),
+              endsIn: new Date(order.endsAt).getTime(),
+              image: order.imageUrl
+            };
+          });
+          allData = data.concat(Object.values(tokens));
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+          allData = Object.values(tokens); // Proceed with local tokens if server fails
+        }
         
         const foundToken =allData.find(
           (t:any) => t.creator === mintAddress,

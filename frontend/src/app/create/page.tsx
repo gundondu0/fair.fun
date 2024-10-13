@@ -105,7 +105,7 @@ export default function CreatePage() {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-theme-text mb-1 transition-colors duration-300">
-                Total Fee: pump move fee (1% + 0.0151156 Sui) + our fee (0.1%)
+                Total Fee: move pump fee (1% + 0.0151156 Sui) + our fee (0.1%)
               </label>
               <p className="text-lg font-medium">{calculateFee()} Sui</p>
             </div>
