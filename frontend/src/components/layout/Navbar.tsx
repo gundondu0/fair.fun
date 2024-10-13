@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { SunDim, Moon } from "@phosphor-icons/react/dist/ssr";
 import Image from "next/image";
 import logoImg from "@/src/public/image/logo.png";
-import { ConnectButton, useWalletKit } from "@mysten/wallet-kit";
+import {ConnectButton, ErrorCode} from '@suiet/wallet-kit';
 
 export default function Navbar() {
   const { isRoboto, toggleFont } = useFont();
@@ -54,11 +54,19 @@ export default function Navbar() {
             </p>
           </Link>
 
-         
         </div>
         <div className="flex items-center space-x-4">
-          <ConnectButton/>
-          <Link href={"/"}>
+        <ConnectButton
+          onConnectError={(error) => {
+            if (error.code === ErrorCode.WALLET__CONNECT_ERROR__USER_REJECTED) {
+              console.warn(
+                "user rejected the connection to " + error.details?.wallet
+              );
+            } else {
+              console.warn("unknown connect error: ", error);
+            }
+          }}
+        />          <Link href={"/"}>
             <Image
               src={logoImg}
               alt="logo"
@@ -69,6 +77,8 @@ export default function Navbar() {
           </Link>
         </div>
       </div>
+      
+
     </div>
   );
 }

@@ -1,6 +1,10 @@
 "use client"
-import { WalletKitProvider } from '@mysten/wallet-kit';
+import {WalletProvider} from '@suiet/wallet-kit';
+import '@suiet/wallet-kit/style.css';
 
 export function SuiProvider({children}:any) {
-    return <WalletKitProvider>{children}</WalletKitProvider>;
+    return <WalletProvider>
+    {children}
+    </WalletProvider>
+  
 }

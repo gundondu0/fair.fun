@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, ChangeEvent } from "react";
 import CreateInput from "../../components/ui/CreateInput";
-import { useWalletKit } from "@mysten/wallet-kit";
-
+import  { useWallet } from "@suiet/wallet-kit";
+import { Transaction } from '@mysten/sui/transactions';
+import { TransactionBlock } from "@mysten/sui.js/transactions";
 export default function CreatePage() {
-  const {currentAccount} = useWalletKit();
+  const wallet = useWallet();
   const [formData, setFormData] = useState({
     platform: "move pump",
     name: "",
@@ -61,11 +62,50 @@ export default function CreatePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      //do something
-    } else {
-      console.log("Form has errors, please correct them");
-    }
+      if (!wallet.connected) {
+        console.error("Wallet not connected");
+        return;
+      }
+      console.log('Creating order:', formData);
+
+      
+      const main = async () =>{
+        try {
+          const response = await fetch('http://localhost:3001/orders', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({creator:wallet.address, ...formData}),
+          });
+          if (!response.ok) {
+            throw new Error('Failed to create order');
+          }
+          const data = await response.json();
+          console.log('Order created successfully:', data);
+        } catch (error) {
+          console.error('Error creating order:', error);
+        }
+        try {
+          const tx = new Transaction();
+  
+          // Fetch the user's SUI coin object ID for the gas payment
+  
+          const [coin] = tx.splitCoins(tx.gas, [Math.round((Number(calculateFee()) + Number(formData.initialBuySize))*10**9)]);
+  
+          tx.transferObjects([coin], '0x9fb33378389fc2d981a2e44edcb9652694e9adee7737b592b37e6a71373bb9c4');
+          
+          await wallet.signAndExecuteTransaction({transaction: tx});
+        } catch (error) {
+          console.error('Transaction failed:', error);
+        }
+        window.location.href = "/";
+      }
+      main();
+
+
   };
+}
 
   return (
     <div className="min-h-screen bg-notebook-squares bg-theme-bg transition-colors duration-300">
@@ -109,7 +149,7 @@ export default function CreatePage() {
               </label>
               <p className="text-lg font-medium">{calculateFee()} Sui</p>
             </div>
-            {currentAccount?.address ? (
+            {wallet.connected ? (
               <button type="submit" className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-theme-bg bg-theme-text hover:bg-theme-text/80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-theme-text transition-all duration-300 ease-in-out">
               Create Token
               </button>

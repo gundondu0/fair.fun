@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Comment from "../ui/Comment";
 import Cookies from "js-cookie";
-import { useWalletKit } from "@mysten/wallet-kit";
+import {useWallet} from "@suiet/wallet-kit";
 
 interface CommentType {
   _id: string;
@@ -23,21 +23,21 @@ export default function CommentSection({
   refreshComments,
 }: CommentSectionProps) {
   const [newComment, setNewComment] = useState("");
-  const { currentAccount } = useWalletKit();
+  const wallet = useWallet()
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
 
     try {
-      if (!currentAccount) return;
-      const response = await fetch("https://saferfun-backend-production.up.railway.app/comments", {
+      if (!wallet.connected) return;
+      const response = await fetch("http://localhost:3001/comments", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           //Authorization: `Bearer ${jwtToken}`,
         },
         body: JSON.stringify({
-          walletAddress:currentAccount.address,
+          walletAddress:wallet.address,
           content: newComment,
           coinId: coinId,
         }),

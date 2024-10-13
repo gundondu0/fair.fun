@@ -36,7 +36,7 @@ export default function CoinListLayout() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch("http://localhost:3000/orders"); // Adjust the URL as needed
+        const response = await fetch("http://localhost:3001/orders"); // Adjust the URL as needed
         if (!response.ok) {
           throw new Error('Failed to fetch orders');
         }

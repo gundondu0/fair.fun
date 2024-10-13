@@ -9,8 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@mysten/wallet-kit": "^0.8.6",
+    "@mysten/sui": "1.1.0",
+    "@mysten/sui.js": "^0.54.1",
     "@phosphor-icons/react": "^2.1.7",
+    "@suiet/wallet-kit": "0.3.2",
     "js-cookie": "^3.0.5",
     "next": "14.2.15",
     "react": "^18",

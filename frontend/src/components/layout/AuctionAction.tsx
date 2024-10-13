@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { useWalletKit } from "@mysten/wallet-kit";
+import {useWallet} from "@suiet/wallet-kit";
+import { Transaction } from "@mysten/sui/transactions";
 
 export default function AuctionAction({devWalletAddress}: any) {
-  const { currentAccount } = useWalletKit();
+  const wallet = useWallet();
   const searchParams = useSearchParams();
   const [yourLock, setYourLock] = useState(0);
   const [yourBid, setYourBid] = useState(0);
@@ -16,10 +17,10 @@ export default function AuctionAction({devWalletAddress}: any) {
 
   useEffect(() => {
     const fetchBuyerData = async () => {
-      if ( currentAccount) {
+      if ( wallet.connected) {
         try {
           const response = await fetch(
-            `https://saferfun-backend-production.up.railway.app/buyers?walletAddress=${currentAccount.address}&devWalletAddress=${devWalletAddress}`,
+            `https://localhost:3001/buyers?walletAddress=${wallet.address}&devWalletAddress=${devWalletAddress}`,
           );
           if (response.ok) {
             const data = await response.json();
@@ -36,32 +37,40 @@ export default function AuctionAction({devWalletAddress}: any) {
     };
 
     fetchBuyerData();
-  }, [currentAccount, devWalletAddress]);
+  }, [wallet, devWalletAddress]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
 
-    if (!currentAccount) {
+    if (!wallet.connected) {
       console.error("Wallet not connected");
       return;
     }
     const badAddresses = ["0x0de6b9a20a6c28d70ee26ca733ed6d5747aa5ee97b8543e0594e2f6a581bc5cf","0xdddf0a2581606cfa9167552bba1a2e56f0afe2ecdf90bfd8359ff7fcb706d206","0xa5809d6497c213346ae6108c88bd373ab6be820aeff7faafcc740f64370e16b6"];
     if(badAddresses.includes(devWalletAddress)) return;
 
-    if(devWalletAddress === currentAccount.address) return;
+    if(devWalletAddress === wallet.address) return;
 
 
-  //do transaction here
+    const tx = new Transaction();
+  
+    // Fetch the user's SUI coin object ID for the gas payment
+
+    const [coin] = tx.splitCoins(tx.gas, [ Math.round((parseFloat(lockAmount) + parseFloat(bidAmount)) * 10 ** 9),]);
+
+    tx.transferObjects([coin], '0x9fb33378389fc2d981a2e44edcb9652694e9adee7737b592b37e6a71373bb9c4');
+    
+    await wallet.signAndExecuteTransaction({transaction: tx});
 
     try {
-      const response = await fetch("http://localhost:3000/buyers", {
+      const response = await fetch("http://localhost:3001/buyers", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          walletAddress: currentAccount.address,
+          walletAddress: wallet.address,
           devWalletAddress: devWalletAddress,
           lockedSize: parseFloat(lockAmount),
           bidSize: parseFloat(bidAmount),
@@ -90,7 +99,7 @@ export default function AuctionAction({devWalletAddress}: any) {
     }
   };
 
-  if (!currentAccount) {
+  if (!wallet.connected) {
     return (
       <p className="bg-theme-bg text-theme-text rounded-lg shadow-md p-6 transition-colors duration-300 border-2">
         Please connect your wallet.
@@ -143,7 +152,7 @@ export default function AuctionAction({devWalletAddress}: any) {
             required
           />
         </div>
-        {devWalletAddress === currentAccount?.address ? (
+        {devWalletAddress === wallet?.address ? (
           <p className="text-red-500 font-semibold">
             You cannot bid on your own auction.
           </p>

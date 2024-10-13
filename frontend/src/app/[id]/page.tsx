@@ -189,7 +189,7 @@ export default function TokenPage() {
       try {
         let allData = [];
         try {
-          const response = await fetch("http://localhost:3000/orders"); // Adjust the URL as needed
+          const response = await fetch("http://localhost:3001/orders"); // Adjust the URL as needed
 
           if (!response.ok) {
             throw new Error('Failed to fetch orders');
@@ -229,7 +229,7 @@ export default function TokenPage() {
     if (!token) return;
     try {
       const response = await fetch(
-        `http://localhost:3000/comments/${token.creator}`,
+        `http://localhost:3001/comments/${token.creator}`,
       );
       const data = await response.json();
       setComments(data);
