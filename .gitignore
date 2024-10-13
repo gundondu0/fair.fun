@@ -1,0 +1,40 @@
+# Ignore build artifacts
+/build/
+*/build/
+
+# Ignore target folder (Rust-based build tools often use this)
+target/
+
+# Ignore package lock files
+Move.lock
+
+# Ignore dependency artifacts
+.move/
+*/.move/
+
+# Ignore IDE/editor specific files
+*.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore log files
+*.log
+
+# Ignore node_modules in case you're using JavaScript tooling
+node_modules/
+
+# Ignore Rust related files if Move uses Rust tooling
+Cargo.lock
+Cargo.toml.bak
+
+# Ignore temporary files or secrets
+*.tmp
+*.swp
+*.env
+*.backup
+
