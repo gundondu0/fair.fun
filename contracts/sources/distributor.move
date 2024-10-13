@@ -7,6 +7,7 @@ module fair_fun::distributor {
     use sui::clock::Clock;
     use sui::sui::SUI;
     use sui::random::{Random, new_generator};
+    use fair_fun::math::{exp, pow, from, to_u128, div, mul};
     use std::fixed_point32::{create_from_rational};
 
     public struct Distributor<phantom T> {
@@ -115,6 +116,19 @@ module fair_fun::distributor {
         }
     }
 
+    // Gaussian function, output in [0, 100]
+    fun gaussian(x: u128): u128 {
+
+        let x_as_f64 = from(x);
+
+        let y = div(from(1), exp(pow(x_as_f64, 2)));
+        // scale y to 100
+        let scaled_y = mul(y,from(100));
+
+        to_u128(scaled_y)
+
+    }
+
     public fun distribute<T>(distributor: &mut Distributor<T>, clock: &Clock, rnd: &RandomNumber, ctx: &mut TxContext): vector<Coin<T>> {
         let mut coins_to_be_sent = vector::empty<Coin<T>>();
         let current_time = clock.timestamp_ms();
@@ -126,26 +140,26 @@ module fair_fun::distributor {
 
         let mut i = 0;
         while (i <= distributor.buyers.length()) {
-            let buyer = distributor.buyers.borrow_mut(i);
-            let rnd_num = (rnd.num1 % 10) + 1;
-
             // first buyer is the lowest in ranking
-            if (current_epoch >= i) {
-                // 50%
-                if (rnd_num <= 5) {
-                    coins_to_be_sent.push_back(probabilistic_withdraw(rnd, buyer, ctx));
-                } else {
-                    coins_to_be_sent.push_back(zero(ctx));
-                }
+            let buyer = distributor.buyers.borrow_mut(i);
+            let rnd_num = (rnd.num1 % 100) + 1;
 
+            // check that for underflow
+            let mut x;
+            if (current_epoch >= i) {
+                x = current_epoch - i;
             } else {
-                // 10%
-                if (rnd_num <= 1) {
-                    coins_to_be_sent.push_back(probabilistic_withdraw(rnd, buyer, ctx));
-                } else {
-                    coins_to_be_sent.push_back(zero(ctx));
-                }
+                x = i - current_epoch;
             };
+
+            let y = gaussian((x) as u128);
+
+            if (rnd_num as u128 <= y) {
+                coins_to_be_sent.push_back(probabilistic_withdraw(rnd, buyer, ctx));
+            } else {
+                coins_to_be_sent.push_back(zero(ctx));
+            };
+
             i = i + 1;
         };
         vector::reverse(&mut coins_to_be_sent);
